@@ -2,7 +2,6 @@ import { create } from "zustand";
 import {
   OrderLevel,
   OrderbookSnapshot,
-  KrakenBookMessage,
   KrakenBookSnapshotMessage,
   KrakenBookUpdateMessage,
   OrderbookMode,
@@ -11,8 +10,6 @@ import {
   AVAILABLE_PAIRS,
   AVAILABLE_DEPTHS,
   MessageType,
-  PAIR_PREFIX_XBT,
-  PAIR_PREFIX_BTC,
 } from "./orderbookTypes";
 import {
   applySnapshot,
@@ -24,6 +21,8 @@ import {
   createKrakenWebSocketClient,
   KrakenWebSocketClient,
 } from "./krakenClient";
+import { normalizeSymbolFromMessage } from "../utils/symbolNormalizer";
+import { markUpdatedPrices } from "../utils/timestampMarker";
 
 export interface OrderbookState {
   // State
@@ -42,6 +41,7 @@ export interface OrderbookState {
   maps: OrderbookMaps;
   client: KrakenWebSocketClient | null;
   historyLimit: number;
+  hasConnectedOnce: boolean;
 
   // Actions
   setPair: (pair: TradingPair) => void;
@@ -58,8 +58,8 @@ export interface OrderbookState {
 
 const DEFAULT_PAIR: TradingPair = AVAILABLE_PAIRS[0];
 const DEFAULT_DEPTH: Depth = AVAILABLE_DEPTHS[0];
-const HISTORY_LIMIT = 800;
-const CAPTURE_INTERVAL_MS = 250;
+const HISTORY_LIMIT = 1800; // 1 hour of history at 2-second intervals
+const CAPTURE_INTERVAL_MS = 2000; // Capture snapshot every 2 seconds
 
 export const useOrderbookStore = create<OrderbookState>(
   (
@@ -94,15 +94,16 @@ export const useOrderbookStore = create<OrderbookState>(
           get().applySnapshot(message);
         },
         onUpdate: (message: KrakenBookUpdateMessage) => {
-          if (get().mode === OrderbookMode.LIVE) {
-            get().applyDelta(message);
-          }
+          get().applyDelta(message);
         },
         onError: (error) => {
-          set({ error: error.message });
+          const state = get();
+          if (state.hasConnectedOnce) {
+            set({ error: error.message });
+          }
         },
         onConnect: () => {
-          set({ connected: true, error: null });
+          set({ connected: true, error: null, hasConnectedOnce: true });
           startHistoryCapture();
         },
         onDisconnect: () => {
@@ -137,17 +138,17 @@ export const useOrderbookStore = create<OrderbookState>(
       maps: { bids: new Map(), asks: new Map() },
       client: null,
       historyLimit: HISTORY_LIMIT,
+      hasConnectedOnce: false,
 
       // Actions
       setPair: (pair: TradingPair) => {
-        // Purge all data when changing pairs
         set({
           pair,
-          maps: { bids: new Map(), asks: new Map() }, // Reset maps when changing pair
+          maps: { bids: new Map(), asks: new Map() },
           bids: [],
           asks: [],
-          history: [], // Clear history when changing pairs
-          index: 0, // Reset history index
+          history: [],
+          index: 0,
           loading: true,
         });
         const state = get();
@@ -160,12 +161,8 @@ export const useOrderbookStore = create<OrderbookState>(
 
       setDepth: (depth: Depth) => {
         const state = get();
-        const previousDepth = state.depth;
-
-        // Set loading state immediately when depth changes
         set({ depth, loading: true });
 
-        // If in time travel mode, update immediately (no reconnection needed)
         if (
           state.mode === OrderbookMode.TIME_TRAVEL &&
           state.history.length > 0
@@ -191,10 +188,7 @@ export const useOrderbookStore = create<OrderbookState>(
           return;
         }
 
-        // For live mode: clear existing data and show loading while reconnecting
-        // Don't show trimmed data - show loading state instead
         if (state.client && state.mode === OrderbookMode.LIVE) {
-          // Clear the data to show loading state
           set({
             bids: [],
             asks: [],
@@ -202,7 +196,6 @@ export const useOrderbookStore = create<OrderbookState>(
           });
           reconnect();
         } else {
-          // No client or not in live mode - just update depth
           if (state.bids.length > 0 || state.asks.length > 0) {
             const trimmedBids = state.bids.slice(0, depth);
             const trimmedAsks = state.asks.slice(0, depth);
@@ -242,41 +235,21 @@ export const useOrderbookStore = create<OrderbookState>(
           return;
 
         const state = get();
-        const bookData = message.data[0]; // First element contains the book data
+        const bookData = message.data[0];
+        const normalizedMessageSymbol = normalizeSymbolFromMessage(
+          bookData.symbol
+        );
 
-        // Validate that this message is for the current pair
-        // API returns symbols in BTC format for XBT pairs (e.g., "BTC/USD"), we store in XBT format (e.g., "XBT/USD")
-        // For other pairs, symbols match directly (e.g., "ETH/USD")
-        const normalizedMessageSymbol = bookData.symbol.startsWith(
-          PAIR_PREFIX_BTC
-        )
-          ? bookData.symbol.replace(PAIR_PREFIX_BTC, PAIR_PREFIX_XBT)
-          : bookData.symbol;
-
-        // Only process if the symbol matches the current pair
         if (normalizedMessageSymbol !== state.pair) {
-          console.warn(
-            `Ignoring snapshot for ${bookData.symbol} (normalized: ${normalizedMessageSymbol}), current pair is ${state.pair}`
-          );
           return;
         }
 
-        console.log("applySnapshot called with:", message);
-
-        // Create fresh maps for snapshot (don't use existing maps)
         const emptyMaps: OrderbookMaps = { bids: new Map(), asks: new Map() };
         const newMaps = applySnapshot(emptyMaps, bookData);
         const snapshot = mapsToSnapshot(newMaps, state.depth, {
           bids: state.bids,
           asks: state.asks,
         });
-
-        console.log(
-          "Snapshot processed, bids:",
-          snapshot.bids.length,
-          "asks:",
-          snapshot.asks.length
-        );
 
         set({
           maps: newMaps,
@@ -285,7 +258,6 @@ export const useOrderbookStore = create<OrderbookState>(
           loading: false,
         });
 
-        // Capture to history if in live mode
         if (state.mode === OrderbookMode.LIVE) {
           get().captureHistory();
         }
@@ -296,30 +268,17 @@ export const useOrderbookStore = create<OrderbookState>(
           return;
 
         const state = get();
-        if (state.mode !== OrderbookMode.LIVE) return;
+        const bookData = message.data[0];
+        const normalizedMessageSymbol = normalizeSymbolFromMessage(
+          bookData.symbol
+        );
 
-        const bookData = message.data[0]; // First element contains the book data
-
-        // Validate that this message is for the current pair
-        // API returns symbols in BTC format for XBT pairs (e.g., "BTC/USD"), we store in XBT format (e.g., "XBT/USD")
-        // For other pairs, symbols match directly (e.g., "ETH/USD")
-        const normalizedMessageSymbol = bookData.symbol.startsWith(
-          PAIR_PREFIX_BTC
-        )
-          ? bookData.symbol.replace(PAIR_PREFIX_BTC, PAIR_PREFIX_XBT)
-          : bookData.symbol;
-
-        // Only process if the symbol matches the current pair
         if (normalizedMessageSymbol !== state.pair) {
-          console.warn(
-            `Ignoring update for ${bookData.symbol} (normalized: ${normalizedMessageSymbol}), current pair is ${state.pair}`
-          );
           return;
         }
 
         const newMaps = applyDelta(state.maps, bookData);
 
-        // Track which prices were updated in this delta
         const updatedPrices = new Set<number>();
         bookData.bids.forEach((level) => updatedPrices.add(level.price));
         bookData.asks.forEach((level) => updatedPrices.add(level.price));
@@ -329,45 +288,43 @@ export const useOrderbookStore = create<OrderbookState>(
           asks: state.asks,
         });
 
-        // Mark updated prices with current timestamp
         const now = Date.now();
-        snapshot.bids.forEach((level) => {
-          if (updatedPrices.has(level.price)) {
-            level.lastUpdated = now;
-          }
-        });
-        snapshot.asks.forEach((level) => {
-          if (updatedPrices.has(level.price)) {
-            level.lastUpdated = now;
-          }
-        });
+        markUpdatedPrices(snapshot.bids, updatedPrices, now);
+        markUpdatedPrices(snapshot.asks, updatedPrices, now);
 
-        set({
-          maps: newMaps,
-          bids: snapshot.bids,
-          asks: snapshot.asks,
-        });
+        if (state.mode === OrderbookMode.LIVE) {
+          set({
+            maps: newMaps,
+            bids: snapshot.bids,
+            asks: snapshot.asks,
+          });
+        } else {
+          set({
+            maps: newMaps,
+          });
+        }
       },
 
       captureHistory: () => {
         const state = get();
-        if (
-          state.mode !== OrderbookMode.LIVE ||
-          state.bids.length === 0 ||
-          state.asks.length === 0
-        ) {
+
+        if (state.maps.bids.size === 0 || state.maps.asks.size === 0) {
           return;
         }
 
+        const liveSnapshot = mapsToSnapshot(state.maps, state.depth, {
+          bids: state.bids,
+          asks: state.asks,
+        });
+
         const snapshot: OrderbookSnapshot = {
           timestamp: Date.now(),
-          bids: [...state.bids],
-          asks: [...state.asks],
+          bids: [...liveSnapshot.bids],
+          asks: [...liveSnapshot.asks],
         };
 
         set((prev: OrderbookState) => {
           const newHistory = [...prev.history, snapshot];
-          // Limit history length
           const trimmedHistory =
             newHistory.length > prev.historyLimit
               ? newHistory.slice(-prev.historyLimit)
@@ -375,7 +332,10 @@ export const useOrderbookStore = create<OrderbookState>(
 
           return {
             history: trimmedHistory,
-            index: trimmedHistory.length - 1,
+            index:
+              prev.mode === OrderbookMode.LIVE
+                ? trimmedHistory.length - 1
+                : prev.index,
           };
         });
       },
@@ -383,22 +343,18 @@ export const useOrderbookStore = create<OrderbookState>(
       setMode: (mode: OrderbookMode) => {
         const state = get();
         if (mode === OrderbookMode.LIVE) {
-          // Return to latest snapshot
-          const latestIndex = state.history.length - 1;
-          if (latestIndex >= 0 && state.history[latestIndex]) {
-            const latest = state.history[latestIndex];
-            set({
-              mode: OrderbookMode.LIVE,
-              index: latestIndex,
-              bids: latest.bids,
-              asks: latest.asks,
-            });
-          } else {
-            set({ mode: OrderbookMode.LIVE });
-          }
-          startHistoryCapture();
+          const currentSnapshot = mapsToSnapshot(state.maps, state.depth, {
+            bids: state.bids,
+            asks: state.asks,
+          });
+
+          set({
+            mode: OrderbookMode.LIVE,
+            index: state.history.length - 1,
+            bids: currentSnapshot.bids,
+            asks: currentSnapshot.asks,
+          });
         } else {
-          // Enter time travel mode
           const latestIndex = state.history.length - 1;
           if (latestIndex >= 0 && state.history[latestIndex]) {
             const snapshot = state.history[latestIndex];
@@ -411,7 +367,6 @@ export const useOrderbookStore = create<OrderbookState>(
           } else {
             set({ mode: OrderbookMode.TIME_TRAVEL });
           }
-          stopHistoryCapture();
         }
       },
 
@@ -419,7 +374,6 @@ export const useOrderbookStore = create<OrderbookState>(
         const state = get();
         if (state.mode !== OrderbookMode.TIME_TRAVEL) {
           set({ mode: OrderbookMode.TIME_TRAVEL });
-          stopHistoryCapture();
         }
 
         const clampedIndex = Math.max(

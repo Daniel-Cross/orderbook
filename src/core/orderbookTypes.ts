@@ -1,7 +1,3 @@
-/**
- * Core type definitions for the orderbook system
- */
-
 export enum OrderbookMode {
   LIVE = "live",
   TIME_TRAVEL = "timeTravel",
@@ -41,14 +37,11 @@ export enum Method {
   UNSUBSCRIBE = "unsubscribe",
 }
 
-// Pair normalization constants
 export const PAIR_PREFIX_XBT = "XBT/";
 export const PAIR_PREFIX_BTC = "BTC/";
 
-// WebSocket URL
 export const KRAKEN_WS_URL = "wss://ws.kraken.com/v2";
 
-// Error messages
 export const ERROR_MESSAGES = {
   SUBSCRIPTION_FAILED: "Subscription failed",
   MAX_RECONNECT_ATTEMPTS: "Max reconnection attempts reached",
@@ -60,7 +53,7 @@ export const ERROR_MESSAGES = {
 export interface OrderLevel {
   price: number;
   size: number;
-  lastUpdated?: number; // Timestamp when this level was last updated
+  lastUpdated?: number;
 }
 
 export interface OrderbookSnapshot {
@@ -169,7 +162,7 @@ export type KrakenEventMessage = KrakenSubscribeAck | KrakenUnsubscribeAck;
 export const AVAILABLE_PAIRS = [
   "XBT/USD",
   "ETH/USD",
-  "SOL/EUR",
+  "SOL/USD",
   "ADA/USD",
   "DOT/USD",
   "MATIC/USD",

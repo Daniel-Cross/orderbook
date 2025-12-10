@@ -123,32 +123,6 @@
   border-color: #999;
 }
 
-/* Connection Status */
-.connection-status {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-  font-size: 14px;
-}
-
-.status-indicator {
-  font-weight: 500;
-}
-
-.status-indicator.connected {
-  color: #50be78;
-}
-
-.status-indicator.disconnected {
-  color: #d2505a;
-}
-
-.error-message {
-  color: #d2505a;
-  font-size: 13px;
-}
-
 /* Time Travel Controls */
 .time-travel-controls {
   margin-bottom: 20px;
@@ -165,7 +139,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin: 6px 0;
+  gap: 12px;
 }
 
 .mode-indicator {
@@ -174,10 +149,20 @@
 
 .mode-indicator .mode-live {
   color: #50be78;
+  font-weight: bold;
+  margin-left: 8px;
 }
 
 .mode-indicator .mode-time-travel {
   color: #fbbf24;
+  font-weight: bold;
+  margin-left: 8px;
+}
+
+.mode-indicator .mode-disconnected {
+  color: #ef4444;
+  font-weight: bold;
+  margin-left: 8px;
 }
 
 .back-to-live-btn {

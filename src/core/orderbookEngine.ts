@@ -1,8 +1,3 @@
-/**
- * Pure orderbook engine logic
- * Handles snapshot/delta application, sorting, and depth limiting
- */
-
 import { OrderLevel, OrderbookSnapshot } from "./orderbookTypes";
 
 export interface OrderbookMaps {
@@ -10,10 +5,6 @@ export interface OrderbookMaps {
   asks: Map<string, string>;
 }
 
-/**
- * Apply a snapshot to the orderbook maps
- * Converts Kraken format (price/qty objects) to internal format (string maps)
- */
 export const applySnapshot = (
   maps: OrderbookMaps,
   snapshot: {
@@ -26,14 +17,12 @@ export const applySnapshot = (
     asks: new Map<string, string>(),
   };
 
-  // Apply bids
   for (const level of snapshot.bids) {
     if (level.qty > 0) {
       newMaps.bids.set(level.price.toString(), level.qty.toString());
     }
   }
 
-  // Apply asks
   for (const level of snapshot.asks) {
     if (level.qty > 0) {
       newMaps.asks.set(level.price.toString(), level.qty.toString());
@@ -43,10 +32,6 @@ export const applySnapshot = (
   return newMaps;
 };
 
-/**
- * Apply a delta update to the orderbook maps
- * Converts Kraken format (price/qty objects) to internal format (string maps)
- */
 export const applyDelta = (
   maps: OrderbookMaps,
   delta: {
@@ -59,7 +44,6 @@ export const applyDelta = (
     asks: new Map<string, string>(maps.asks),
   };
 
-  // Apply bid updates
   for (const level of delta.bids) {
     const priceStr = level.price.toString();
     if (level.qty === 0) {
@@ -69,7 +53,6 @@ export const applyDelta = (
     }
   }
 
-  // Apply ask updates
   for (const level of delta.asks) {
     const priceStr = level.price.toString();
     if (level.qty === 0) {
@@ -82,10 +65,6 @@ export const applyDelta = (
   return newMaps;
 };
 
-/**
- * Convert maps to sorted arrays and limit depth
- * Preserves lastUpdated timestamps from existing levels
- */
 export const mapsToSnapshot = (
   maps: OrderbookMaps,
   depth: number,
@@ -93,7 +72,6 @@ export const mapsToSnapshot = (
 ): OrderbookSnapshot => {
   const now = Date.now();
 
-  // Create a map of existing levels by price for timestamp preservation
   const existingBidsMap = new Map<number, number>();
   const existingAsksMap = new Map<number, number>();
 
@@ -110,11 +88,9 @@ export const mapsToSnapshot = (
     });
   }
 
-  // Convert bids to array and sort descending by price
   const bidsArray: OrderLevel[] = Array.from(maps.bids.entries())
     .map(([price, size]) => {
       const priceNum = parseFloat(price);
-      // If price exists in existing map, keep timestamp, otherwise set new timestamp
       const lastUpdated = existingBidsMap.has(priceNum)
         ? existingBidsMap.get(priceNum)
         : now;
@@ -127,11 +103,9 @@ export const mapsToSnapshot = (
     .sort((a, b) => b.price - a.price)
     .slice(0, depth);
 
-  // Convert asks to array and sort ascending by price
   const asksArray: OrderLevel[] = Array.from(maps.asks.entries())
     .map(([price, size]) => {
       const priceNum = parseFloat(price);
-      // If price exists in existing map, keep timestamp, otherwise set new timestamp
       const lastUpdated = existingAsksMap.has(priceNum)
         ? existingAsksMap.get(priceNum)
         : now;
@@ -151,9 +125,6 @@ export const mapsToSnapshot = (
   };
 };
 
-/**
- * Calculate cumulative sizes for visualization
- */
 export const calculateCumulative = (levels: OrderLevel[]): number[] => {
   let cumulative = 0;
   return levels.map((level) => {
@@ -162,9 +133,6 @@ export const calculateCumulative = (levels: OrderLevel[]): number[] => {
   });
 };
 
-/**
- * Calculate spread (best ask - best bid)
- */
 export const calculateSpread = (
   bids: OrderLevel[],
   asks: OrderLevel[]

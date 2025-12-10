@@ -5,18 +5,14 @@ import {
   useOrderbookStore,
   OrderbookState,
 } from "../core/createOrderbookStore";
-import {
-  formatPrice,
-  formatSize,
-  formatTotal,
-  formatSpreadPercent,
-} from "../utils/formatNumbers";
+import { formatPrice, formatSpreadPercent } from "../utils/formatNumbers";
+import { OrderbookSide } from "./OrderbookSide";
 
 interface OrderbookTableProps {
   showSpread?: boolean;
 }
 
-const HIGHLIGHT_DURATION_MS = 1000; // How long to highlight updated levels
+const HIGHLIGHT_DURATION_MS = 1000;
 
 export const OrderbookTable = ({ showSpread = false }: OrderbookTableProps) => {
   const bids = useOrderbookStore((s: OrderbookState) => s.bids);
@@ -24,7 +20,6 @@ export const OrderbookTable = ({ showSpread = false }: OrderbookTableProps) => {
   const loading = useOrderbookStore((s: OrderbookState) => s.loading);
   const [now, setNow] = useState(Date.now());
 
-  // Update time every 100ms to trigger highlight fade animations
   useEffect(() => {
     const interval = setInterval(() => {
       setNow(Date.now());
@@ -62,50 +57,15 @@ export const OrderbookTable = ({ showSpread = false }: OrderbookTableProps) => {
         </div>
       ) : (
         <div className="orderbook-table">
-          {/* Asks Section (Top) */}
-          <div className="orderbook-side asks-side">
-            <div className="orderbook-header">
-              <div>PRICE</div>
-              <div>SIZE</div>
-              <div>TOTAL</div>
-            </div>
-            <div className="orderbook-rows">
-              {isEmpty ? (
-                <div className="orderbook-empty">
-                  Waiting for orderbook data…
-                </div>
-              ) : (
-                asks.map((ask: OrderLevel, idx: number) => {
-                  const cumulative = asksCumulative[idx];
-                  const percentWidth =
-                    maxCumulative > 0 ? (cumulative / maxCumulative) * 100 : 0;
-                  const recentlyUpdated = isRecentlyUpdated(ask);
-                  return (
-                    <div
-                      key={`ask-${ask.price}-${idx}`}
-                      className={`orderbook-row ask-row ${
-                        recentlyUpdated ? "recently-updated" : ""
-                      }`}
-                    >
-                      <div className="bar-container">
-                        <div
-                          className="bar ask-bar"
-                          style={{ width: `${percentWidth}%` }}
-                        />
-                      </div>
-                      <div className="price ask-price">
-                        {formatPrice(ask.price)}
-                      </div>
-                      <div className="size">{formatSize(ask.size)}</div>
-                      <div className="total">{formatTotal(cumulative)}</div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
+          <OrderbookSide
+            side="ask"
+            levels={asks}
+            cumulativeTotals={asksCumulative}
+            maxCumulative={maxCumulative}
+            isRecentlyUpdated={isRecentlyUpdated}
+            isEmpty={isEmpty}
+          />
 
-          {/* Spread Display (Middle) */}
           {showSpread && spread !== null && spreadPercent !== null && (
             <div className="spread-display">
               <span className="spread-label">Spread:</span>
@@ -116,48 +76,14 @@ export const OrderbookTable = ({ showSpread = false }: OrderbookTableProps) => {
             </div>
           )}
 
-          {/* Bids Section (Bottom) */}
-          <div className="orderbook-side bids-side">
-            <div className="orderbook-header">
-              <div>PRICE</div>
-              <div>SIZE</div>
-              <div>TOTAL</div>
-            </div>
-            <div className="orderbook-rows">
-              {isEmpty ? (
-                <div className="orderbook-empty">
-                  Waiting for orderbook data…
-                </div>
-              ) : (
-                bids.map((bid: OrderLevel, idx: number) => {
-                  const cumulative = bidsCumulative[idx];
-                  const percentWidth =
-                    maxCumulative > 0 ? (cumulative / maxCumulative) * 100 : 0;
-                  const recentlyUpdated = isRecentlyUpdated(bid);
-                  return (
-                    <div
-                      key={`bid-${bid.price}-${idx}`}
-                      className={`orderbook-row bid-row ${
-                        recentlyUpdated ? "recently-updated" : ""
-                      }`}
-                    >
-                      <div className="bar-container">
-                        <div
-                          className="bar bid-bar"
-                          style={{ width: `${percentWidth}%` }}
-                        />
-                      </div>
-                      <div className="price bid-price">
-                        {formatPrice(bid.price)}
-                      </div>
-                      <div className="size">{formatSize(bid.size)}</div>
-                      <div className="total">{formatTotal(cumulative)}</div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
+          <OrderbookSide
+            side="bid"
+            levels={bids}
+            cumulativeTotals={bidsCumulative}
+            maxCumulative={maxCumulative}
+            isRecentlyUpdated={isRecentlyUpdated}
+            isEmpty={isEmpty}
+          />
         </div>
       )}
     </div>

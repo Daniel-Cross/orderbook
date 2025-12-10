@@ -1,10 +1,14 @@
-import { useOrderbookStore, OrderbookState } from "../core/createOrderbookStore";
+import {
+  useOrderbookStore,
+  OrderbookState,
+} from "../core/createOrderbookStore";
 import { OrderbookMode } from "../core/orderbookTypes";
 
 export const TimeTravelControls = () => {
   const history = useOrderbookStore((s: OrderbookState) => s.history);
   const mode = useOrderbookStore((s: OrderbookState) => s.mode);
   const index = useOrderbookStore((s: OrderbookState) => s.index);
+  const connected = useOrderbookStore((s: OrderbookState) => s.connected);
   const setMode = useOrderbookStore((s: OrderbookState) => s.setMode);
   const setIndex = useOrderbookStore((s: OrderbookState) => s.setIndex);
 
@@ -28,17 +32,31 @@ export const TimeTravelControls = () => {
 
   const hasHistory = history.length > 0;
 
+  const getModeDisplay = () => {
+    if (mode === OrderbookMode.TIME_TRAVEL) {
+      return { text: "Time Travel", className: "mode-time-travel" };
+    }
+    if (connected) {
+      return { text: "Live", className: "mode-live" };
+    }
+    return { text: "Disconnected", className: "mode-disconnected" };
+  };
+
+  const modeDisplay = getModeDisplay();
+
   return (
     <div className="time-travel-controls">
       <div className="time-travel-header">
         <span className="mode-indicator">
-          Mode: <strong className={mode === OrderbookMode.LIVE ? "mode-live" : "mode-time-travel"}>
-            {mode === OrderbookMode.LIVE ? "Live" : "Time Travel"}
-          </strong>
+          Mode:
+          <span className={modeDisplay.className}>{modeDisplay.text}</span>
         </span>
         {mode === OrderbookMode.LIVE ? (
           hasHistory && (
-            <button onClick={handleEnterTimeTravel} className="enter-time-travel-btn">
+            <button
+              onClick={handleEnterTimeTravel}
+              className="enter-time-travel-btn"
+            >
               Enter Time Travel
             </button>
           )
@@ -51,7 +69,8 @@ export const TimeTravelControls = () => {
       {mode === OrderbookMode.TIME_TRAVEL && hasHistory && (
         <div className="time-travel-slider">
           <label htmlFor="history-slider">
-            Snapshot {index + 1} of {history.length} ({Math.round((index / (history.length - 1)) * 100)}% through history)
+            Snapshot {index + 1} of {history.length} (
+            {Math.round((index / (history.length - 1)) * 100)}% through history)
           </label>
           <input
             id="history-slider"
@@ -72,4 +91,3 @@ export const TimeTravelControls = () => {
     </div>
   );
 };
-
