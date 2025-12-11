@@ -1,7 +1,3 @@
-/**
- * Reusable theme colors and styles
- */
-
 export const colors = {
   // Bid colors (green)
   bid: {
@@ -23,15 +19,6 @@ export const colors = {
     text: "#e0e0e0",
     textMuted: "#b0b0b0",
     textSecondary: "#888",
-  },
-  // Light theme
-  light: {
-    background: "#ffffff",
-    surface: "#f5f5f5",
-    border: "#ddd",
-    text: "#333333",
-    textMuted: "#666",
-    textSecondary: "#666",
   },
   // Common colors
   error: "#d2505a",
@@ -73,4 +60,3 @@ export const transitions = {
   normal: "0.2s ease",
   slow: "0.3s ease",
 } as const;
-

@@ -38,7 +38,13 @@ type OrderbookMode = "live" | "timeTravel";
 Available trading pairs.
 
 ```typescript
-type TradingPair = "XBT/USD" | "ETH/USD" | "SOL/EUR" | "ADA/USD" | "DOT/USD" | "MATIC/USD";
+type TradingPair =
+  | "XBT/USD"
+  | "ETH/USD"
+  | "SOL/EUR"
+  | "ADA/USD"
+  | "DOT/USD"
+  | "MATIC/USD";
 ```
 
 ### `Depth`
@@ -128,11 +134,10 @@ Main component for displaying the orderbook.
 
 ```typescript
 interface OrderbookVisualizerProps {
-  initialPair: TradingPair;      // Required: Initial trading pair
-  initialDepth?: Depth;          // Optional: Initial depth (default: 10)
-  enableTimeTravel?: boolean;    // Optional: Enable time travel (default: false)
-  theme?: "light" | "dark";      // Optional: Theme (default: "dark")
-  showSpread?: boolean;          // Optional: Show spread (default: false)
+  initialPair: TradingPair; // Required: Initial trading pair
+  initialDepth?: Depth; // Optional: Initial depth (default: 10)
+  enableTimeTravel?: boolean; // Optional: Enable time travel (default: false)
+  showSpread?: boolean; // Optional: Show spread (default: false)
 }
 ```
 
@@ -143,7 +148,6 @@ interface OrderbookVisualizerProps {
   initialPair="XBT/USD"
   initialDepth={10}
   enableTimeTravel
-  theme="dark"
   showSpread
 />
 ```
@@ -156,7 +160,7 @@ Displays the orderbook in a two-column layout.
 
 ```typescript
 interface OrderbookTableProps {
-  showSpread?: boolean;  // Optional: Show spread display (default: false)
+  showSpread?: boolean; // Optional: Show spread display (default: false)
 }
 ```
 
@@ -188,7 +192,7 @@ Apply a snapshot to orderbook maps.
 function applySnapshot(
   maps: OrderbookMaps,
   snapshot: { bids: Array<[string, string]>; asks: Array<[string, string]> }
-): OrderbookMaps
+): OrderbookMaps;
 ```
 
 ### `applyDelta(maps, delta)`
@@ -199,7 +203,7 @@ Apply a delta update to orderbook maps.
 function applyDelta(
   maps: OrderbookMaps,
   delta: { bids: Array<[string, string]>; asks: Array<[string, string]> }
-): OrderbookMaps
+): OrderbookMaps;
 ```
 
 ### `mapsToSnapshot(maps, depth)`
@@ -207,10 +211,7 @@ function applyDelta(
 Convert orderbook maps to a sorted snapshot.
 
 ```typescript
-function mapsToSnapshot(
-  maps: OrderbookMaps,
-  depth: number
-): OrderbookSnapshot
+function mapsToSnapshot(maps: OrderbookMaps, depth: number): OrderbookSnapshot;
 ```
 
 ### `calculateCumulative(levels)`
@@ -218,7 +219,7 @@ function mapsToSnapshot(
 Calculate cumulative sizes for visualization.
 
 ```typescript
-function calculateCumulative(levels: OrderLevel[]): number[]
+function calculateCumulative(levels: OrderLevel[]): number[];
 ```
 
 ### `calculateSpread(bids, asks)`
@@ -226,10 +227,7 @@ function calculateCumulative(levels: OrderLevel[]): number[]
 Calculate the spread between best bid and ask.
 
 ```typescript
-function calculateSpread(
-  bids: OrderLevel[],
-  asks: OrderLevel[]
-): number | null
+function calculateSpread(bids: OrderLevel[], asks: OrderLevel[]): number | null;
 ```
 
 ## WebSocket Client
@@ -339,4 +337,3 @@ const AVAILABLE_DEPTHS = [10, 25, 100, 500, 1000] as const;
 ```
 
 Note: Size of `"0"` in updates means remove that price level.
-

@@ -2,7 +2,6 @@ import { useEffect } from "react";
 import {
   TradingPair,
   Depth,
-  Theme,
   AVAILABLE_PAIRS,
   AVAILABLE_DEPTHS,
 } from "../core/orderbookTypes";
@@ -19,7 +18,6 @@ export interface OrderbookVisualizerProps {
   initialPair: TradingPair;
   initialDepth?: Depth;
   enableTimeTravel?: boolean;
-  theme?: Theme;
   showSpread?: boolean;
 }
 
@@ -27,7 +25,6 @@ export const OrderbookVisualizer = ({
   initialPair,
   initialDepth = 10,
   enableTimeTravel = false,
-  theme = Theme.DARK,
   showSpread = false,
 }: OrderbookVisualizerProps) => {
   const connect = useOrderbookStore((s: OrderbookState) => s.connect);
@@ -53,7 +50,7 @@ export const OrderbookVisualizer = ({
   }, []);
 
   return (
-    <div className={`orderbook-visualizer theme-${theme.toLowerCase()}`}>
+    <div className={`orderbook-visualizer`}>
       <div className="orderbook-controls">
         <PairSelector />
         <DepthSelector />

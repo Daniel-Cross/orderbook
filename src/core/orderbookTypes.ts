@@ -3,11 +3,6 @@ export enum OrderbookMode {
   TIME_TRAVEL = "timeTravel",
 }
 
-export enum Theme {
-  LIGHT = "light",
-  DARK = "dark",
-}
-
 export enum MessageType {
   SNAPSHOT = "snapshot",
   UPDATE = "update",
