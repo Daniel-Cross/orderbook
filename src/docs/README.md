@@ -46,6 +46,40 @@ npm run build
 - **History & chart cadence**: Snapshots are captured every ~2s in live mode, up to 1800 snapshots (~1 hour). The mid-price chart is fed from this history; give it a few seconds on startup or after pair/depth changes to populate.
 - **Spread & highlights**: Optional spread display (absolute + %) and recent-update highlights (green/red) to show where the action is.
 
+## Reusability / Embedding
+
+- **Drop-in component**: Use `OrderbookVisualizer` in any React app; the chart is optional (omit `PriceChart` if you only need the book).
+- **Headless core**: Consume the store/engine directly to build custom UIs while keeping Kraken connectivity:
+  - `createOrderbookStore` for connection, state, history, modes
+  - `orderbookEngine` for snapshot/delta application and sorting
+  - `krakenClient` for WebSocket lifecycle
+- **Example (component)**:
+
+  ```tsx
+  import { OrderbookVisualizer } from "./components/OrderbookVisualizer";
+
+  export const App = () => (
+    <OrderbookVisualizer
+      initialPair="XBT/USD"
+      initialDepth={25}
+      enableTimeTravel
+      showSpread
+    />
+  );
+  ```
+
+- **Example (headless state)**:
+
+  ```ts
+  import { useOrderbookStore } from "./core/createOrderbookStore";
+
+  const bids = useOrderbookStore((s) => s.bids);
+  const asks = useOrderbookStore((s) => s.asks);
+  // Render your own UI; the store manages Kraken updates.
+  ```
+
+- **Packaging**: The code is structured to be publishable as a small npm package (core + components). Add an entry-point that re-exports the pieces you want to expose and run a build before publishing. Until then, you can consume it via a path or git dependency.
+
 ## Architecture
 
 ### Core Logic (`src/core/`)
