@@ -23,7 +23,8 @@ export const PriceChart = () => {
   const connected = useOrderbookStore((state) => state.connected);
 
   useEffect(() => {
-    if (!chartContainerRef.current) return;
+    // Lazily create the chart once the container exists
+    if (!chartContainerRef.current || chartRef.current) return;
 
     const containerWidth = chartContainerRef.current.clientWidth;
     const containerHeight = chartContainerRef.current.clientHeight;
@@ -104,10 +105,80 @@ export const PriceChart = () => {
     return () => {
       window.removeEventListener("resize", handleResize);
       chart.remove();
+      chartRef.current = null;
+      lineSeriesRef.current = null;
     };
-  }, []);
+  }, [chartContainerRef.current]);
 
   useEffect(() => {
+    // If the chart has not been created yet (e.g., history was empty on mount),
+    // try to create it now that we have data.
+    if (!chartRef.current && chartContainerRef.current) {
+      // Trigger chart creation by calling the creation effect logic
+      const containerWidth = chartContainerRef.current.clientWidth;
+      const containerHeight = chartContainerRef.current.clientHeight;
+      const chart = createChart(chartContainerRef.current, {
+        width: containerWidth,
+        height: containerHeight,
+        layout: {
+          background: { color: "#1a1a1a" },
+          textColor: "#b0b0b0",
+        },
+        grid: {
+          vertLines: { color: "#2a2a2a" },
+          horzLines: { color: "#2a2a2a" },
+        },
+        crosshair: {
+          mode: 1,
+          vertLine: {
+            color: "#666",
+            width: 1,
+            style: 2,
+            labelBackgroundColor: "#50be78",
+          },
+          horzLine: {
+            color: "#666",
+            width: 1,
+            style: 2,
+            labelBackgroundColor: "#50be78",
+          },
+        },
+        rightPriceScale: {
+          borderColor: "#333",
+        },
+        timeScale: {
+          borderColor: "#333",
+          timeVisible: true,
+          secondsVisible: false,
+        },
+        handleScroll: {
+          mouseWheel: true,
+          pressedMouseMove: true,
+          horzTouchDrag: true,
+          vertTouchDrag: true,
+        },
+        handleScale: {
+          axisPressedMouseMove: true,
+          mouseWheel: true,
+          pinch: true,
+        },
+      });
+
+      const lineSeries = chart.addSeries(LineSeries, {
+        color: "#50be78",
+        lineWidth: 2,
+        crosshairMarkerVisible: true,
+        crosshairMarkerRadius: 4,
+        crosshairMarkerBorderColor: "#50be78",
+        crosshairMarkerBackgroundColor: "#1a1a1a",
+        lastValueVisible: true,
+        priceLineVisible: true,
+      });
+
+      chartRef.current = chart;
+      lineSeriesRef.current = lineSeries;
+    }
+
     if (!lineSeriesRef.current || history.length === 0) return;
 
     const dataToShow =

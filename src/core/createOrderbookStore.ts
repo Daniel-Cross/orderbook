@@ -58,7 +58,7 @@ export interface OrderbookState {
 
 const DEFAULT_PAIR: TradingPair = AVAILABLE_PAIRS[0];
 const DEFAULT_DEPTH: Depth = AVAILABLE_DEPTHS[0];
-const HISTORY_LIMIT = 1800; // 1 hour of history at 2-second intervals
+const HISTORY_LIMIT = 1800; // ~1 hour at 2s intervals (adjust as needed)
 const CAPTURE_INTERVAL_MS = 2000; // Capture snapshot every 2 seconds
 
 export const useOrderbookStore = create<OrderbookState>(
@@ -71,6 +71,7 @@ export const useOrderbookStore = create<OrderbookState>(
     get: () => OrderbookState
   ) => {
     let captureIntervalId: ReturnType<typeof setInterval> | null = null;
+    let lastCaptureAt = 0;
 
     const startHistoryCapture = () => {
       if (captureIntervalId) {
@@ -311,6 +312,12 @@ export const useOrderbookStore = create<OrderbookState>(
         if (state.maps.bids.size === 0 || state.maps.asks.size === 0) {
           return;
         }
+
+        const now = Date.now();
+        if (now - lastCaptureAt < CAPTURE_INTERVAL_MS) {
+          return;
+        }
+        lastCaptureAt = now;
 
         const liveSnapshot = mapsToSnapshot(state.maps, state.depth, {
           bids: state.bids,
