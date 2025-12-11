@@ -32,6 +32,10 @@ npm start
 
 Open `http://localhost:3000`.
 
+### Hosted Demo
+
+- Live demo (no local setup): https://orderbook-ochre.vercel.app/
+
 ### Build (prod)
 
 ```bash
