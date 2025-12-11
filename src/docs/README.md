@@ -1,16 +1,16 @@
 # Kraken Orderbook Visualizer
 
-A production-ready React + TypeScript application for visualizing real-time orderbook data from the Kraken cryptocurrency exchange using WebSocket API v2.
+A production-ready React + TypeScript application for visualizing the real-time Kraken orderbook (WebSocket API v2) with time-travel history and a live mid-price chart.
 
 ## Features
 
-- **Real-time Orderbook**: Live updates via Kraken WebSocket API v2
-- **Multiple Trading Pairs**: Switch between different cryptocurrency pairs
-- **Configurable Depth**: Adjust orderbook depth (10, 25, 100, 500, 1000)
-- **Time Travel**: Navigate through historical snapshots with a slider
-- **Visual Depth Bars**: CSS-based depth visualization (no chart libraries)
-- **Spread Display**: Real-time bid-ask spread calculation
-- **Clean Architecture**: Separation of concerns with headless state management
+- Real-time orderbook via Kraken WebSocket API v2 (`book` channel)
+- Pair selector (XBT/USD, ETH/USD, SOL/EUR, ADA/USD, DOT/USD, MATIC/USD)
+- Depth selector (10, 25, 100, 500, 1000) with clean reconnects and loading state
+- Time travel slider over captured snapshots; “Back to Live” button
+- Visual depth bars (CSS only), optional spread display, green/red highlights on updated levels
+- Live mid-price chart (lightweight-charts) fed by snapshot history
+- Headless state logic (Zustand) separated from presentational UI
 
 ## Getting Started
 
@@ -18,150 +18,77 @@ A production-ready React + TypeScript application for visualizing real-time orde
 
 - Node.js 16+ and npm
 
-### Installation
+### Install
 
 ```bash
 npm install
 ```
 
-### Running the Application
+### Run (dev)
 
 ```bash
 npm start
 ```
 
-The application will open at `http://localhost:3000`.
+Open `http://localhost:3000`.
+
+### Build (prod)
+
+```bash
+npm run build
+```
 
 ## Usage
 
-### Switching Trading Pairs
-
-Use the "Trading Pair" dropdown in the top controls to switch between available pairs:
-- XBT/USD
-- ETH/USD
-- SOL/EUR
-- ADA/USD
-- DOT/USD
-- MATIC/USD
-
-The WebSocket connection will automatically reconnect when you change pairs.
-
-### Adjusting Depth
-
-Use the "Depth" dropdown to control how many price levels are displayed:
-- 10 (default)
-- 25
-- 100
-- 500
-- 1000
-
-Changing depth will reconnect the WebSocket with the new depth parameter.
-
-### Time Travel Mode
-
-When `enableTimeTravel` is enabled:
-
-1. **Enter Time Travel**: Click the history slider or use the time travel controls
-2. **Navigate History**: Use the slider to move through historical snapshots
-3. **View Timestamp**: The current snapshot's timestamp is displayed
-4. **Back to Live**: Click "Back to Live" to return to real-time updates
-
-The system automatically captures snapshots every 250ms when in live mode, storing up to 800 snapshots.
-
-### Spread Display
-
-When `showSpread` is enabled, the application displays:
-- Absolute spread (best ask - best bid)
-- Percentage spread relative to the best bid
+- **Switch pairs**: Use the pair dropdown. We purge prior data, reconnect, and only process messages for the selected pair.
+- **Adjust depth**: Use the depth dropdown. We clear current rows, reconnect with the new depth, and show a loading state until the first snapshot arrives.
+- **Time travel**: Enter via the controls, drag the slider through captured snapshots, and click “Back to Live” to resume realtime. History capture pauses while in time travel.
+- **History & chart cadence**: Snapshots are captured every ~2s in live mode, up to 1800 snapshots (~1 hour). The mid-price chart is fed from this history; give it a few seconds on startup or after pair/depth changes to populate.
+- **Spread & highlights**: Optional spread display (absolute + %) and recent-update highlights (green/red) to show where the action is.
 
 ## Architecture
 
 ### Core Logic (`src/core/`)
 
-- **`orderbookTypes.ts`**: TypeScript type definitions
-- **`orderbookEngine.ts`**: Pure functions for applying snapshots/deltas, sorting, and depth limiting
-- **`createOrderbookStore.ts`**: Zustand store managing global state
-- **`krakenClient.ts`**: WebSocket client with automatic reconnection
+- `orderbookTypes.ts`: types/enums/constants
+- `orderbookEngine.ts`: pure orderbook math (apply snapshot/delta, sort, depth limit)
+- `createOrderbookStore.ts`: headless Zustand store (WS lifecycle, history, modes, loading)
+- `krakenClient.ts`: functional WS client (subscribe, parse, reconnect)
 
 ### Components (`src/components/`)
 
-- **`OrderbookVisualizer.tsx`**: Main component orchestrating the orderbook display
-- **`OrderbookTable.tsx`**: Two-column layout for bids and asks
-- **`TimeTravelControls.tsx`**: Slider and controls for history navigation
-- **`PairSelector.tsx`**: Trading pair dropdown
-- **`DepthSelector.tsx`**: Depth selection dropdown
+- `OrderbookVisualizer.tsx`: top-level container
+- `OrderbookTable.tsx`: asks/spread/bids with depth bars and highlights
+- `TimeTravelControls.tsx`: slider + live toggle
+- `PairSelector.tsx`, `DepthSelector.tsx`
+- `PriceChart.tsx`: mid-price chart (lightweight-charts)
 
 ### State Management
 
-The application uses Zustand for global state management. The store is "headless" - it manages:
-- WebSocket connection lifecycle
-- Snapshot and delta application
-- Sorted bids/asks arrays
-- Snapshot history for time travel
-- Connection status and errors
-
-Components access state via Zustand selectors, ensuring efficient re-renders.
+- Headless store tracks connection, maps, sorted bids/asks, history, loading, errors, modes.
+- UI reads via selectors to avoid unnecessary re-renders.
 
 ## How It Works
 
 ### WebSocket Connection
 
-1. Connect to `wss://ws.kraken.com`
-2. Subscribe to the "book" channel with selected pair and depth
-3. Receive snapshot messages (initial state)
-4. Receive update messages (delta changes)
-5. Apply updates to internal orderbook maps
-6. Convert maps to sorted arrays and limit to depth
-7. Update UI reactively
+1. Connect to `wss://ws.kraken.com/v2`.
+2. Subscribe to `book` with current pair/depth (BTC format for API, normalized internally to XBT).
+3. Snapshot: build maps → sorted arrays → UI.
+4. Update: apply deltas → resort → UI.
+5. Ignore messages for other pairs.
+6. Reconnect on pair/depth change or disconnect.
 
 ### Orderbook Processing
 
-- **Internal State**: Uses `Map<string, string>` to preserve precision
-- **Snapshot Application**: Replaces entire orderbook state
-- **Delta Application**: Updates/adds/removes individual price levels
-- **Sorting**: Bids descending, asks ascending
-- **Depth Limiting**: Manual truncation after sorting
+- Internal state uses `Map<string, string>` to preserve precision.
+- Snapshots replace the book; deltas add/update/remove levels.
+- Bids sorted descending, asks ascending; truncated to selected depth.
 
 ### History Capture
 
-- Snapshots captured every 250ms in live mode
-- Maximum 800 snapshots stored (configurable)
-- Oldest snapshots automatically removed when limit reached
-- History paused during time travel mode
-
-## Future Improvements
-
-### Multi-Pair Dashboards
-- Display multiple orderbooks side-by-side
-- Compare spreads across pairs
-- Aggregate volume metrics
-
-### Tick Replay
-- Step through individual updates (not just snapshots)
-- Replay at different speeds
-- Export replay data
-
-### Persistent History
-- Save history to localStorage or IndexedDB
-- Load previous sessions
-- Export/import history data
-
-### Checksum Validation
-- Implement Kraken's checksum validation
-- Detect data integrity issues
-- Automatic reconnection on checksum failure
-
-### Performance Optimizations
-- Virtual scrolling for large depths
-- Web Workers for orderbook processing
-- Debounced history capture
-
-### Additional Features
-- Orderbook depth heatmaps
-- Volume-weighted average price (VWAP)
-- Market depth charts
-- Trade history integration
-- Customizable themes
+- Snapshots every ~2s in live mode.
+- Max 1800 snapshots (oldest dropped).
 
 ## Development
 
@@ -176,15 +103,6 @@ src/
   docs/              # Documentation
 ```
 
-### Code Style
-
-- Modern ES2025+ JavaScript/TypeScript
-- Functional components with hooks
-- No React import needed (React 17+)
-- Prefer constants/enums over magic strings
-- Keep files under 200-300 lines
-
 ## License
 
 MIT
-

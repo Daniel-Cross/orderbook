@@ -23,6 +23,7 @@ The application will open at `http://localhost:3000`.
 ## Documentation
 
 For detailed documentation, see:
+
 - [Full README](./src/docs/README.md) - Complete guide and architecture
 - [API Documentation](./src/docs/API.md) - API reference
 
@@ -49,9 +50,10 @@ src/
 - TypeScript
 - Zustand (state management)
 - WebSocket API
-- Plain CSS (no Tailwind)
+- Plain CSS
 
 ## License
 
 MIT
+
 # orderbook
