@@ -46,6 +46,12 @@ export const OrderbookTable = ({ showSpread = false }: OrderbookTableProps) => {
       ? (spread / bids[0].price) * 100
       : null;
 
+  // Calculate mid-price
+  const midPrice =
+    bids.length > 0 && asks.length > 0
+      ? (bids[0].price + asks[0].price) / 2
+      : null;
+
   const isEmpty = bids.length === 0 && asks.length === 0;
 
   return (
@@ -59,22 +65,30 @@ export const OrderbookTable = ({ showSpread = false }: OrderbookTableProps) => {
         <div className="orderbook-table">
           <OrderbookSide
             side="ask"
-            levels={asks}
-            cumulativeTotals={asksCumulative}
+            levels={asks.slice().reverse()}
+            cumulativeTotals={asksCumulative.slice().reverse()}
             maxCumulative={maxCumulative}
             isRecentlyUpdated={isRecentlyUpdated}
             isEmpty={isEmpty}
+            midPrice={midPrice}
           />
 
-          {showSpread && spread !== null && spreadPercent !== null && (
-            <div className="spread-display">
-              <span className="spread-label">Spread:</span>
-              <span className="spread-value">{formatPrice(spread)}</span>
-              <span className="spread-percent">
-                ({formatSpreadPercent(spreadPercent)})
-              </span>
-            </div>
-          )}
+          <div className="spread-display">
+            {spread !== null && spreadPercent !== null ? (
+              <>
+                <span className="spread-label">Spread:</span>
+                <span className="spread-value">{formatPrice(spread)}</span>
+                <span className="spread-percent">
+                  ({formatSpreadPercent(spreadPercent)})
+                </span>
+              </>
+            ) : midPrice !== null ? (
+              <>
+                <span className="spread-label">Mid Price:</span>
+                <span className="spread-value">{formatPrice(midPrice)}</span>
+              </>
+            ) : null}
+          </div>
 
           <OrderbookSide
             side="bid"
@@ -83,6 +97,7 @@ export const OrderbookTable = ({ showSpread = false }: OrderbookTableProps) => {
             maxCumulative={maxCumulative}
             isRecentlyUpdated={isRecentlyUpdated}
             isEmpty={isEmpty}
+            midPrice={midPrice}
           />
         </div>
       )}

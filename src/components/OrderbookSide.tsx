@@ -8,6 +8,7 @@ interface OrderbookSideProps {
   maxCumulative: number;
   isRecentlyUpdated: (level: OrderLevel) => boolean;
   isEmpty: boolean;
+  midPrice: number | null;
 }
 
 export const OrderbookSide = ({
@@ -17,15 +18,17 @@ export const OrderbookSide = ({
   maxCumulative,
   isRecentlyUpdated,
   isEmpty,
+  midPrice,
 }: OrderbookSideProps) => {
   const pluralSide = side === "bid" ? "bids" : "asks";
 
   return (
     <div className={`orderbook-side ${pluralSide}-side`}>
       <div className="orderbook-header">
-        <div>PRICE</div>
-        <div>SIZE</div>
-        <div>TOTAL</div>
+        <div>PRICE (USD)</div>
+        <div>AMOUNT (BTC)</div>
+        <div>TOTAL (BTC)</div>
+        <div>VALUE (USD)</div>
       </div>
       <div className="orderbook-rows">
         {isEmpty ? (
@@ -46,6 +49,7 @@ export const OrderbookSide = ({
                 recentlyUpdated={recentlyUpdated}
                 side={side}
                 index={idx}
+                midPrice={midPrice}
               />
             );
           })

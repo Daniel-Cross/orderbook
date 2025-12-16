@@ -21,7 +21,7 @@ export const formatPrice = (price: number): string => {
  */
 export const formatSize = (size: number): string => {
   if (size === 0) return "0";
-  
+
   // For very large numbers, use fewer decimals
   if (size >= 1000) {
     return new Intl.NumberFormat("en-US", {
@@ -30,7 +30,7 @@ export const formatSize = (size: number): string => {
       useGrouping: true,
     }).format(size);
   }
-  
+
   // For medium numbers, use 2-4 decimals
   if (size >= 1) {
     return new Intl.NumberFormat("en-US", {
@@ -39,7 +39,7 @@ export const formatSize = (size: number): string => {
       useGrouping: true,
     }).format(size);
   }
-  
+
   // For small numbers, use up to 8 decimals but remove trailing zeros
   const formatted = size.toFixed(8);
   return formatted.replace(/\.?0+$/, "");
@@ -50,7 +50,7 @@ export const formatSize = (size: number): string => {
  */
 export const formatTotal = (total: number): string => {
   if (total === 0) return "0";
-  
+
   // For totals, use fewer decimals for readability
   if (total >= 1000) {
     return new Intl.NumberFormat("en-US", {
@@ -59,7 +59,7 @@ export const formatTotal = (total: number): string => {
       useGrouping: true,
     }).format(total);
   }
-  
+
   return new Intl.NumberFormat("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 4,
@@ -74,3 +74,23 @@ export const formatSpreadPercent = (percent: number): string => {
   return `${percent.toFixed(4)}%`;
 };
 
+/**
+ * Format USD value with thousands separators
+ */
+export const formatValue = (value: number): string => {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+    useGrouping: true,
+  }).format(value);
+};
+
+/**
+ * Format distance from mid-price as percentage
+ */
+export const formatDistancePercent = (percent: number): string => {
+  const sign = percent >= 0 ? "+" : "";
+  return `${sign}${percent.toFixed(2)}%`;
+};
