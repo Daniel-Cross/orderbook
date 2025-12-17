@@ -35,9 +35,12 @@ export const OrderbookTable = ({ showSpread = false }: OrderbookTableProps) => {
 
   const bidsCumulative = calculateCumulative(bids);
   const asksCumulative = calculateCumulative(asks);
-  const maxCumulative = Math.max(
-    bidsCumulative[bidsCumulative.length - 1] || 0,
-    asksCumulative[asksCumulative.length - 1] || 0
+
+  // Calculate max individual size for bar visualization
+  const maxSize = Math.max(
+    ...bids.map((b) => b.size),
+    ...asks.map((a) => a.size),
+    0
   );
 
   const spread = showSpread ? calculateSpread(bids, asks) : null;
@@ -63,15 +66,25 @@ export const OrderbookTable = ({ showSpread = false }: OrderbookTableProps) => {
         </div>
       ) : (
         <div className="orderbook-table">
-          <OrderbookSide
-            side="ask"
-            levels={asks.slice().reverse()}
-            cumulativeTotals={asksCumulative.slice().reverse()}
-            maxCumulative={maxCumulative}
-            isRecentlyUpdated={isRecentlyUpdated}
-            isEmpty={isEmpty}
-            midPrice={midPrice}
-          />
+          <div className="orderbook-sides-container">
+            <OrderbookSide
+              side="bid"
+              levels={bids}
+              cumulativeTotals={bidsCumulative}
+              maxSize={maxSize}
+              isRecentlyUpdated={isRecentlyUpdated}
+              isEmpty={isEmpty}
+            />
+
+            <OrderbookSide
+              side="ask"
+              levels={asks.slice().reverse()}
+              cumulativeTotals={asksCumulative.slice().reverse()}
+              maxSize={maxSize}
+              isRecentlyUpdated={isRecentlyUpdated}
+              isEmpty={isEmpty}
+            />
+          </div>
 
           <div className="spread-display">
             {spread !== null && spreadPercent !== null ? (
@@ -89,16 +102,6 @@ export const OrderbookTable = ({ showSpread = false }: OrderbookTableProps) => {
               </>
             ) : null}
           </div>
-
-          <OrderbookSide
-            side="bid"
-            levels={bids}
-            cumulativeTotals={bidsCumulative}
-            maxCumulative={maxCumulative}
-            isRecentlyUpdated={isRecentlyUpdated}
-            isEmpty={isEmpty}
-            midPrice={midPrice}
-          />
         </div>
       )}
     </div>

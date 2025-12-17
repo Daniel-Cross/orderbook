@@ -37,6 +37,7 @@ export interface KrakenWebSocketClient {
 
 const MAX_RECONNECT_ATTEMPTS = 5;
 const RECONNECT_DELAY = 1000;
+const UPDATE_THROTTLE_MS = 50; // Throttle updates to every 50ms
 
 const handleMessage = (
   data: KrakenWebSocketMessage,
@@ -90,6 +91,9 @@ export const createKrakenWebSocketClient = (
   let ws: WebSocket | null = null;
   let reconnectAttempts = 0;
   let reconnectTimeoutId: ReturnType<typeof setTimeout> | null = null;
+  let lastUpdateTime = 0;
+  let pendingUpdate: KrakenBookUpdateMessage | null = null;
+  let throttleTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   const attemptReconnect = (pair: TradingPair, depth: Depth): void => {
     if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
@@ -102,6 +106,42 @@ export const createKrakenWebSocketClient = (
     reconnectTimeoutId = setTimeout(() => {
       connect(pair, depth);
     }, RECONNECT_DELAY * reconnectAttempts);
+  };
+
+  const processThrottledUpdate = (): void => {
+    if (pendingUpdate) {
+      callbacks.onUpdate(pendingUpdate);
+      pendingUpdate = null;
+      lastUpdateTime = Date.now();
+    }
+    throttleTimeoutId = null;
+  };
+
+  const handleThrottledUpdate = (update: KrakenBookUpdateMessage): void => {
+    const now = Date.now();
+    const timeSinceLastUpdate = now - lastUpdateTime;
+
+    if (timeSinceLastUpdate >= UPDATE_THROTTLE_MS) {
+      // Enough time has passed, process immediately
+      callbacks.onUpdate(update);
+      lastUpdateTime = now;
+      pendingUpdate = null;
+
+      if (throttleTimeoutId) {
+        clearTimeout(throttleTimeoutId);
+        throttleTimeoutId = null;
+      }
+    } else {
+      // Store the latest update and schedule processing
+      pendingUpdate = update;
+
+      if (!throttleTimeoutId) {
+        throttleTimeoutId = setTimeout(
+          processThrottledUpdate,
+          UPDATE_THROTTLE_MS - timeSinceLastUpdate
+        );
+      }
+    }
   };
 
   const connect = (pair: TradingPair, depth: Depth): void => {
@@ -117,6 +157,8 @@ export const createKrakenWebSocketClient = (
     try {
       ws = new WebSocket(KRAKEN_WS_URL);
       reconnectAttempts = 0;
+      lastUpdateTime = 0;
+      pendingUpdate = null;
 
       ws.onopen = () => {
         callbacks.onConnect();
@@ -130,10 +172,20 @@ export const createKrakenWebSocketClient = (
           if (
             isSystemStatus(parsed) ||
             isSubscriptionStatus(parsed) ||
-            isBookMessage(parsed) ||
             isEventMessage(parsed)
           ) {
             handleMessage(parsed as KrakenWebSocketMessage, callbacks);
+            return;
+          }
+
+          if (isBookMessage(parsed)) {
+            if (parsed.type === MessageType.SNAPSHOT) {
+              // Always process snapshots immediately
+              callbacks.onSnapshot(parsed);
+            } else if (parsed.type === MessageType.UPDATE) {
+              // Throttle updates
+              handleThrottledUpdate(parsed);
+            }
           }
         } catch (error) {
           console.error(
@@ -172,7 +224,16 @@ export const createKrakenWebSocketClient = (
       reconnectTimeoutId = null;
     }
 
+    if (throttleTimeoutId) {
+      clearTimeout(throttleTimeoutId);
+      throttleTimeoutId = null;
+    }
+
+    pendingUpdate = null;
+    lastUpdateTime = 0;
+
     if (ws) {
+      ws.onclose = null; // Prevent reconnection attempt
       ws.close();
       ws = null;
     }

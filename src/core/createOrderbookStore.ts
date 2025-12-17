@@ -162,12 +162,12 @@ export const useOrderbookStore = create<OrderbookState>(
 
       setDepth: (depth: Depth) => {
         const state = get();
-        set({ depth, loading: true });
 
         if (
           state.mode === OrderbookMode.TIME_TRAVEL &&
           state.history.length > 0
         ) {
+          set({ depth });
           const currentSnapshot = state.history[state.index];
           if (currentSnapshot) {
             const trimmedSnapshot = {
@@ -181,20 +181,27 @@ export const useOrderbookStore = create<OrderbookState>(
               history: updatedHistory,
               bids: trimmedSnapshot.bids,
               asks: trimmedSnapshot.asks,
-              loading: false,
             });
-          } else {
-            set({ loading: false });
           }
           return;
         }
 
         if (state.client && state.mode === OrderbookMode.LIVE) {
+          // Disconnect immediately to stop incoming data
+          if (state.client) {
+            state.client.disconnect();
+          }
+
+          // Set loading state and clear data
           set({
+            depth,
+            loading: true,
             bids: [],
             asks: [],
             maps: { bids: new Map(), asks: new Map() },
           });
+
+          // Reconnect with new depth
           reconnect();
         } else {
           if (state.bids.length > 0 || state.asks.length > 0) {
@@ -203,10 +210,7 @@ export const useOrderbookStore = create<OrderbookState>(
             set({
               bids: trimmedBids,
               asks: trimmedAsks,
-              loading: false,
             });
-          } else {
-            set({ loading: false });
           }
         }
       },
@@ -309,6 +313,11 @@ export const useOrderbookStore = create<OrderbookState>(
       captureHistory: () => {
         const state = get();
 
+        // Don't capture history when in time travel mode
+        if (state.mode === OrderbookMode.TIME_TRAVEL) {
+          return;
+        }
+
         if (state.maps.bids.size === 0 || state.maps.asks.size === 0) {
           return;
         }
@@ -324,8 +333,16 @@ export const useOrderbookStore = create<OrderbookState>(
           asks: state.asks,
         });
 
+        // Ensure timestamp is always increasing to prevent chart ordering errors
+        let timestamp = Date.now();
+        if (state.history.length > 0) {
+          const lastTimestamp =
+            state.history[state.history.length - 1].timestamp;
+          timestamp = Math.max(timestamp, lastTimestamp + 1);
+        }
+
         const snapshot: OrderbookSnapshot = {
-          timestamp: Date.now(),
+          timestamp,
           bids: [...liveSnapshot.bids],
           asks: [...liveSnapshot.asks],
         };

@@ -37,7 +37,6 @@
 }
 
 .orderbook-container {
-  background-color: #1a1a1a;
   overflow-y: auto;
   overflow-x: auto;
   height: 100vh;
@@ -57,9 +56,7 @@
   overflow-x: hidden;
 }
 
-/* Theme: Dark (default) */
 .orderbook-visualizer {
-  background-color: #1a1a1a;
   color: #e0e0e0;
 }
 
@@ -70,6 +67,10 @@
   align-items: center;
   margin-bottom: 20px;
   flex-wrap: wrap;
+}
+
+.orderbook-controls .time-travel-controls {
+  margin-left: auto;
 }
 
 .pair-selector,
@@ -240,7 +241,6 @@
     rgba(26, 26, 26, 0.8) 100%
   );
   border-top: 2px solid #333;
-  border-bottom: 2px solid #333;
   font-size: 15px;
   font-weight: 600;
   color: #e0e0e0;
@@ -286,50 +286,39 @@
   box-sizing: border-box;
 }
 
+.orderbook-sides-container {
+  display: grid;
+  grid-template-columns: 400px 400px;
+  gap: 0;
+  width: 800px;
+  box-sizing: border-box;
+  border-bottom: 2px solid #333;
+}
+
 .orderbook-side {
   display: flex;
   flex-direction: column;
-  width: 100%;
-  min-width: 0;
+  width: 400px;
+  min-width: 400px;
+  max-width: 400px;
   box-sizing: border-box;
-  overflow-x: visible;
+  overflow-x: hidden;
 }
 
-.orderbook-header {
-  display: grid;
-  grid-template-columns: 1fr 120px 120px 100px;
-  gap: 16px;
-  padding: 12px 16px;
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: #999;
-  border-bottom: 2px solid #333;
-  background-color: #1f1f1f;
-  box-sizing: border-box;
-  font-feature-settings: "tnum";
-  font-variant-numeric: tabular-nums;
-}
-
-.orderbook-header > div:nth-child(1) {
+.side-header {
+  padding: 16px 20px;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
   text-align: left;
-  grid-column: 1;
 }
 
-.orderbook-header > div:nth-child(2) {
-  text-align: right;
-  grid-column: 2;
+.bid-header {
+  color: #50be78;
 }
 
-.orderbook-header > div:nth-child(3) {
-  text-align: right;
-  grid-column: 3;
-}
-
-.orderbook-header > div:nth-child(4) {
-  text-align: right;
-  grid-column: 4;
+.ask-header {
+  color: #ef4444;
 }
 
 .orderbook-rows {
@@ -371,49 +360,46 @@
 
 .orderbook-row {
   display: grid;
-  grid-template-columns: 1fr 120px 120px 100px;
-  gap: 16px;
-  padding: 8px 16px;
+  grid-template-columns: 50px 1fr 50px;
+  padding: 10px;
   position: relative;
-  font-size: 13px;
+  font-size: 14px;
   font-family: "SF Mono", "Monaco", "Inconsolata", "Roboto Mono",
     "Source Code Pro", monospace;
   font-feature-settings: "tnum";
   font-variant-numeric: tabular-nums;
-  min-height: 34px;
+  min-height: 40px;
   align-items: center;
-  transition: all 0.15s ease;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  transition: all 0.1s ease;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.02);
   box-sizing: border-box;
   cursor: default;
-}
-
-.orderbook-row > .price {
-  grid-column: 1;
-  text-align: left;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  background-color: transparent;
 }
 
 .orderbook-row > .size {
-  grid-column: 2;
-  text-align: right;
+  grid-column: 1;
+  text-align: left;
+  color: #e0e0e0;
 }
 
 .orderbook-row > .total {
-  grid-column: 3;
-  text-align: right;
+  grid-column: 2;
+  text-align: center;
+  font-weight: 600;
+  font-size: 15px;
 }
 
-.orderbook-row > .value {
-  grid-column: 4;
+.orderbook-row > .price {
+  grid-column: 3;
   text-align: right;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
 }
 
 .orderbook-row:hover {
-  background-color: rgba(255, 255, 255, 0.05);
-  transform: scale(1.002);
+  background-color: rgba(255, 255, 255, 0.03);
 }
 
 .orderbook-row.bid-row.recently-updated {
@@ -450,115 +436,73 @@
   position: absolute;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
+  width: 100%;
+  height: 100%;
   z-index: 0;
-  display: flex;
-  align-items: center;
+  overflow: visible;
+  pointer-events: none;
 }
 
 .bar {
-  height: 100%;
-  opacity: 1;
+  position: absolute;
+  top: 0;
+  bottom: 0;
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .bid-bar {
-  background: linear-gradient(
-    90deg,
-    rgba(34, 197, 94, 0) 0%,
-    rgba(34, 197, 94, 0.25) 50%,
-    rgba(34, 197, 94, 0.35) 100%
-  );
-  margin-left: auto;
+  background-color: rgba(80, 190, 120, 0.3);
+  right: 0;
 }
 
 .ask-bar {
-  background: linear-gradient(
-    90deg,
-    rgba(239, 68, 68, 0.35) 0%,
-    rgba(239, 68, 68, 0.25) 50%,
-    rgba(239, 68, 68, 0) 100%
-  );
-  margin-left: 0;
+  background-color: rgba(239, 68, 68, 0.3);
+  left: 0;
 }
 
-.orderbook-row > * {
+.orderbook-row > .size,
+.orderbook-row > .total,
+.orderbook-row > .price {
   position: relative;
   z-index: 1;
 }
 
 .price {
-  font-weight: 600;
+  font-weight: 400;
   font-size: 14px;
-  letter-spacing: 0.3px;
-  text-align: left;
+  letter-spacing: 0;
+  text-align: right;
 }
 
-.bid-price {
-  color: #4ade80;
+.orderbook-row > .bid-price {
+  color: #50be78;
 }
 
-.ask-price {
-  color: #f87171;
+.orderbook-row > .ask-price {
+  color: #ef4444;
 }
 
-.price-distance {
-  font-size: 10px;
-  font-weight: 500;
-  padding: 2px 6px;
-  border-radius: 3px;
-  background-color: rgba(255, 255, 255, 0.08);
-  color: #999;
+.bid-total {
+  color: #e0e0e0;
+}
+
+.ask-total {
+  color: #e0e0e0;
 }
 
 .size {
-  color: #c0c0c0;
-  text-align: right;
-  font-size: 13px;
+  color: #e0e0e0;
+  text-align: left;
+  font-size: 14px;
   letter-spacing: 0;
+  font-weight: 400;
 }
 
 .total {
-  color: #b0b0b0;
-  text-align: right;
-  font-size: 13px;
+  text-align: center;
+  font-size: 15px;
   letter-spacing: 0;
-}
-
-.value {
-  color: #e0e0e0;
-  text-align: right;
-  font-size: 13px;
-  letter-spacing: 0;
-  font-weight: 500;
-}
-
-.row-tooltip {
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
-  background-color: #2a2a2a;
-  color: #e0e0e0;
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 12px;
-  white-space: nowrap;
-  z-index: 1000;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-  pointer-events: none;
-  border: 1px solid #444;
-}
-
-.row-tooltip::after {
-  content: "";
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 6px solid transparent;
-  border-top-color: #2a2a2a;
+  font-weight: 600;
 }
 
 .spread-display {

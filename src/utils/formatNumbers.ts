@@ -62,7 +62,7 @@ export const formatTotal = (total: number): string => {
 
   return new Intl.NumberFormat("en-US", {
     minimumFractionDigits: 2,
-    maximumFractionDigits: 4,
+    maximumFractionDigits: 2,
     useGrouping: true,
   }).format(total);
 };
