@@ -6,7 +6,6 @@ interface OrderbookSideProps {
   levels: OrderLevel[];
   cumulativeTotals: number[];
   maxSize: number;
-  isRecentlyUpdated: (level: OrderLevel) => boolean;
   isEmpty: boolean;
 }
 
@@ -15,7 +14,6 @@ export const OrderbookSide = ({
   levels,
   cumulativeTotals,
   maxSize,
-  isRecentlyUpdated,
   isEmpty,
 }: OrderbookSideProps) => {
   const pluralSide = side === "bid" ? "bids" : "asks";
@@ -31,7 +29,6 @@ export const OrderbookSide = ({
           levels.map((level: OrderLevel, idx: number) => {
             const cumulative = cumulativeTotals[idx];
             const percentWidth = maxSize > 0 ? (level.size / maxSize) * 100 : 0;
-            const recentlyUpdated = isRecentlyUpdated(level);
 
             return (
               <OrderbookRow
@@ -39,7 +36,6 @@ export const OrderbookSide = ({
                 level={level}
                 cumulative={cumulative}
                 percentWidth={percentWidth}
-                recentlyUpdated={recentlyUpdated}
                 side={side}
                 index={idx}
               />

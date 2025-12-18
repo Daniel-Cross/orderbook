@@ -58,7 +58,7 @@ export interface OrderbookState {
 
 const DEFAULT_PAIR: TradingPair = AVAILABLE_PAIRS[0];
 const DEFAULT_DEPTH: Depth = AVAILABLE_DEPTHS[0];
-const HISTORY_LIMIT = 1800; // ~1 hour at 2s intervals (adjust as needed)
+const HISTORY_LIMIT = 1800; // ~1 hour at 2s intervals
 const CAPTURE_INTERVAL_MS = 2000; // Capture snapshot every 2 seconds
 
 export const useOrderbookStore = create<OrderbookState>(
@@ -89,40 +89,33 @@ export const useOrderbookStore = create<OrderbookState>(
       }
     };
 
-    const createClient = (): KrakenWebSocketClient => {
-      return createKrakenWebSocketClient({
-        onSnapshot: (message: KrakenBookSnapshotMessage) => {
-          get().applySnapshot(message);
-        },
-        onUpdate: (message: KrakenBookUpdateMessage) => {
-          get().applyDelta(message);
-        },
-        onError: (error) => {
-          const state = get();
-          if (state.hasConnectedOnce) {
-            set({ error: error.message });
-          }
-        },
-        onConnect: () => {
-          set({ connected: true, error: null, hasConnectedOnce: true });
-          startHistoryCapture();
-        },
-        onDisconnect: () => {
-          set({ connected: false });
-          stopHistoryCapture();
-        },
-      });
-    };
-
-    const reconnect = () => {
-      const state = get();
-      if (state.client) {
-        state.client.disconnect();
-      }
-      const newClient = createClient();
-      set({ client: newClient });
-      newClient.connect(state.pair, state.depth);
-    };
+    const client = createKrakenWebSocketClient({
+      onSnapshot: (message: KrakenBookSnapshotMessage) => {
+        get().applySnapshot(message);
+      },
+      onUpdate: (message: KrakenBookUpdateMessage) => {
+        get().applyDelta(message);
+      },
+      onError: (error) => {
+        const state = get();
+        if (state.hasConnectedOnce) {
+          set({ error: error.message });
+        }
+      },
+      onConnect: () => {
+        set({
+          connected: true,
+          error: null,
+          hasConnectedOnce: true,
+          loading: false,
+        });
+        startHistoryCapture();
+      },
+      onDisconnect: () => {
+        set({ connected: false });
+        stopHistoryCapture();
+      },
+    });
 
     return {
       // Initial state
@@ -137,7 +130,7 @@ export const useOrderbookStore = create<OrderbookState>(
       loading: false,
       error: null,
       maps: { bids: new Map(), asks: new Map() },
-      client: null,
+      client,
       historyLimit: HISTORY_LIMIT,
       hasConnectedOnce: false,
 
@@ -152,12 +145,8 @@ export const useOrderbookStore = create<OrderbookState>(
           index: 0,
           loading: true,
         });
-        const state = get();
-        if (state.client) {
-          reconnect();
-        } else {
-          set({ loading: false });
-        }
+        // Client handles reconnection automatically
+        client.connect(get().pair, get().depth);
       },
 
       setDepth: (depth: Depth) => {
@@ -186,13 +175,10 @@ export const useOrderbookStore = create<OrderbookState>(
           return;
         }
 
-        if (state.client && state.mode === OrderbookMode.LIVE) {
-          // Disconnect immediately to stop incoming data
+        if (state.mode === OrderbookMode.LIVE && state.connected) {
           if (state.client) {
             state.client.disconnect();
           }
-
-          // Set loading state and clear data
           set({
             depth,
             loading: true,
@@ -201,17 +187,15 @@ export const useOrderbookStore = create<OrderbookState>(
             maps: { bids: new Map(), asks: new Map() },
           });
 
-          // Reconnect with new depth
-          reconnect();
+          client.connect(state.pair, depth);
         } else {
-          if (state.bids.length > 0 || state.asks.length > 0) {
-            const trimmedBids = state.bids.slice(0, depth);
-            const trimmedAsks = state.asks.slice(0, depth);
-            set({
-              bids: trimmedBids,
-              asks: trimmedAsks,
-            });
-          }
+          set({ depth });
+          const trimmedBids = state.bids.slice(0, depth);
+          const trimmedAsks = state.asks.slice(0, depth);
+          set({
+            bids: trimmedBids,
+            asks: trimmedAsks,
+          });
         }
       },
 
@@ -221,18 +205,11 @@ export const useOrderbookStore = create<OrderbookState>(
           state.client.disconnect();
         }
         set({ loading: true });
-        const newClient = createClient();
-        set({ client: newClient });
-        newClient.connect(state.pair, state.depth);
+        client.connect(get().pair, get().depth);
       },
 
       disconnect: () => {
-        const state = get();
-        if (state.client) {
-          state.client.disconnect();
-        }
-        stopHistoryCapture();
-        set({ connected: false });
+        client.disconnect();
       },
 
       applySnapshot: (message: KrakenBookSnapshotMessage) => {
@@ -313,7 +290,6 @@ export const useOrderbookStore = create<OrderbookState>(
       captureHistory: () => {
         const state = get();
 
-        // Don't capture history when in time travel mode
         if (state.mode === OrderbookMode.TIME_TRAVEL) {
           return;
         }
@@ -333,7 +309,6 @@ export const useOrderbookStore = create<OrderbookState>(
           asks: state.asks,
         });
 
-        // Ensure timestamp is always increasing to prevent chart ordering errors
         let timestamp = Date.now();
         if (state.history.length > 0) {
           const lastTimestamp =

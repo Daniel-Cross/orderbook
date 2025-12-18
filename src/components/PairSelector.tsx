@@ -1,9 +1,16 @@
 import { AVAILABLE_PAIRS, TradingPair } from "../core/orderbookTypes";
-import { useOrderbookStore, OrderbookState } from "../core/createOrderbookStore";
+import {
+  useOrderbookStore,
+  OrderbookState,
+} from "../core/createOrderbookStore";
+
+const selectPairState = (s: OrderbookState) => ({
+  pair: s.pair,
+  setPair: s.setPair,
+});
 
 export const PairSelector = () => {
-  const pair = useOrderbookStore((s: OrderbookState) => s.pair);
-  const setPair = useOrderbookStore((s: OrderbookState) => s.setPair);
+  const { pair, setPair } = useOrderbookStore(selectPairState);
 
   return (
     <div className="pair-selector">
@@ -22,4 +29,3 @@ export const PairSelector = () => {
     </div>
   );
 };
-

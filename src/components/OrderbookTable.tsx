@@ -1,5 +1,4 @@
-import { useState, useEffect } from "react";
-import { OrderLevel } from "../core/orderbookTypes";
+import { useMemo } from "react";
 import { calculateCumulative, calculateSpread } from "../core/orderbookEngine";
 import {
   useOrderbookStore,
@@ -12,50 +11,33 @@ interface OrderbookTableProps {
   showSpread?: boolean;
 }
 
-const HIGHLIGHT_DURATION_MS = 1000;
+const selectOrderbookData = (s: OrderbookState) => ({
+  bids: s.bids,
+  asks: s.asks,
+  loading: s.loading,
+});
 
 export const OrderbookTable = ({ showSpread = false }: OrderbookTableProps) => {
-  const bids = useOrderbookStore((s: OrderbookState) => s.bids);
-  const asks = useOrderbookStore((s: OrderbookState) => s.asks);
-  const loading = useOrderbookStore((s: OrderbookState) => s.loading);
-  const [now, setNow] = useState(Date.now());
+  const { bids, asks, loading } = useOrderbookStore(selectOrderbookData);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setNow(Date.now());
-    }, 100);
-    return () => clearInterval(interval);
-  }, []);
+  const bidsCumulative = useMemo(() => calculateCumulative(bids), [bids]);
+  const asksCumulative = useMemo(() => calculateCumulative(asks), [asks]);
 
-  const isRecentlyUpdated = (level: OrderLevel): boolean => {
-    if (!level.lastUpdated) return false;
-    const age = now - level.lastUpdated;
-    return age < HIGHLIGHT_DURATION_MS;
-  };
-
-  const bidsCumulative = calculateCumulative(bids);
-  const asksCumulative = calculateCumulative(asks);
-
-  // Calculate max individual size for bar visualization
-  const maxSize = Math.max(
-    ...bids.map((b) => b.size),
-    ...asks.map((a) => a.size),
-    0
+  const maxSize = useMemo(
+    () => Math.max(...bids.map((b) => b.size), ...asks.map((a) => a.size), 0),
+    [bids, asks]
   );
 
-  const spread = showSpread ? calculateSpread(bids, asks) : null;
-  const spreadPercent =
-    spread && bids.length > 0 && asks.length > 0
-      ? (spread / bids[0].price) * 100
-      : null;
-
-  // Calculate mid-price
-  const midPrice =
-    bids.length > 0 && asks.length > 0
-      ? (bids[0].price + asks[0].price) / 2
-      : null;
-
   const isEmpty = bids.length === 0 && asks.length === 0;
+  const hasData = !isEmpty;
+
+  const spread = useMemo(
+    () => (showSpread && hasData ? calculateSpread(bids, asks) : null),
+    [showSpread, hasData, bids, asks]
+  );
+
+  const spreadPercent = spread ? (spread / bids[0].price) * 100 : null;
+  const midPrice = hasData ? (bids[0].price + asks[0].price) / 2 : null;
 
   return (
     <div className="orderbook-table-container">
@@ -72,7 +54,6 @@ export const OrderbookTable = ({ showSpread = false }: OrderbookTableProps) => {
               levels={bids}
               cumulativeTotals={bidsCumulative}
               maxSize={maxSize}
-              isRecentlyUpdated={isRecentlyUpdated}
               isEmpty={isEmpty}
             />
 
@@ -81,27 +62,28 @@ export const OrderbookTable = ({ showSpread = false }: OrderbookTableProps) => {
               levels={asks.slice().reverse()}
               cumulativeTotals={asksCumulative.slice().reverse()}
               maxSize={maxSize}
-              isRecentlyUpdated={isRecentlyUpdated}
               isEmpty={isEmpty}
             />
           </div>
 
-          <div className="spread-display">
-            {spread !== null && spreadPercent !== null ? (
-              <>
-                <span className="spread-label">Spread:</span>
-                <span className="spread-value">{formatPrice(spread)}</span>
-                <span className="spread-percent">
-                  ({formatSpreadPercent(spreadPercent)})
-                </span>
-              </>
-            ) : midPrice !== null ? (
-              <>
-                <span className="spread-label">Mid Price:</span>
-                <span className="spread-value">{formatPrice(midPrice)}</span>
-              </>
-            ) : null}
-          </div>
+          {hasData && (
+            <div className="spread-display">
+              {spread ? (
+                <>
+                  <span className="spread-label">Spread:</span>
+                  <span className="spread-value">{formatPrice(spread)}</span>
+                  <span className="spread-percent">
+                    ({formatSpreadPercent(spreadPercent!)})
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="spread-label">Mid Price:</span>
+                  <span className="spread-value">{formatPrice(midPrice!)}</span>
+                </>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -21,31 +21,30 @@ export interface OrderbookVisualizerProps {
   showSpread?: boolean;
 }
 
+const selectVisualizerActions = (s: OrderbookState) => ({
+  connect: s.connect,
+  disconnect: s.disconnect,
+  setPair: s.setPair,
+  setDepth: s.setDepth,
+});
+
 export const OrderbookVisualizer = ({
   initialPair,
   initialDepth = 10,
   enableTimeTravel = false,
   showSpread = false,
 }: OrderbookVisualizerProps) => {
-  const connect = useOrderbookStore((s: OrderbookState) => s.connect);
-  const disconnect = useOrderbookStore((s: OrderbookState) => s.disconnect);
-  const setPair = useOrderbookStore((s: OrderbookState) => s.setPair);
-  const setDepth = useOrderbookStore((s: OrderbookState) => s.setDepth);
+  const { connect, disconnect, setPair, setDepth } = useOrderbookStore(
+    selectVisualizerActions
+  );
 
   useEffect(() => {
-    const storeState = useOrderbookStore.getState();
-    if (storeState.pair === AVAILABLE_PAIRS[0]) {
-      setPair(initialPair);
-    }
-    if (storeState.depth === AVAILABLE_DEPTHS[0]) {
-      setDepth(initialDepth);
-    }
+    const { pair, depth } = useOrderbookStore.getState();
+    if (pair === AVAILABLE_PAIRS[0]) setPair(initialPair);
+    if (depth === AVAILABLE_DEPTHS[0]) setDepth(initialDepth);
 
     connect();
-
-    return () => {
-      disconnect();
-    };
+    return () => disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

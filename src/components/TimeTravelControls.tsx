@@ -1,38 +1,33 @@
+import { useMemo } from "react";
 import {
   useOrderbookStore,
   OrderbookState,
 } from "../core/createOrderbookStore";
 import { OrderbookMode } from "../core/orderbookTypes";
 
+const selectTimeTravelState = (s: OrderbookState) => ({
+  history: s.history,
+  mode: s.mode,
+  index: s.index,
+  connected: s.connected,
+  setMode: s.setMode,
+  setIndex: s.setIndex,
+});
+
 export const TimeTravelControls = () => {
-  const history = useOrderbookStore((s: OrderbookState) => s.history);
-  const mode = useOrderbookStore((s: OrderbookState) => s.mode);
-  const index = useOrderbookStore((s: OrderbookState) => s.index);
-  const connected = useOrderbookStore((s: OrderbookState) => s.connected);
-  const setMode = useOrderbookStore((s: OrderbookState) => s.setMode);
-  const setIndex = useOrderbookStore((s: OrderbookState) => s.setIndex);
-
-  const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newIndex = parseInt(e.target.value, 10);
-    setIndex(newIndex);
-  };
-
-  const handleBackToLive = () => {
-    setMode(OrderbookMode.LIVE);
-  };
-
-  const handleEnterTimeTravel = () => {
-    setMode(OrderbookMode.TIME_TRAVEL);
-  };
-
-  const currentSnapshot = history[index];
-  const timestamp = currentSnapshot
-    ? new Date(currentSnapshot.timestamp).toLocaleTimeString()
-    : "N/A";
+  const { history, mode, index, connected, setMode, setIndex } =
+    useOrderbookStore(selectTimeTravelState);
 
   const hasHistory = history.length > 0;
+  const historyLength = history.length;
+  const maxIndex = Math.max(0, historyLength - 1);
 
-  const getModeDisplay = () => {
+  const timestamp = useMemo(() => {
+    const snapshot = history[index];
+    return snapshot ? new Date(snapshot.timestamp).toLocaleTimeString() : "N/A";
+  }, [history, index]);
+
+  const modeDisplay = useMemo(() => {
     if (mode === OrderbookMode.TIME_TRAVEL) {
       return { text: "Time Travel", className: "mode-time-travel" };
     }
@@ -40,9 +35,16 @@ export const TimeTravelControls = () => {
       return { text: "Live", className: "mode-live" };
     }
     return { text: "Disconnected", className: "mode-disconnected" };
-  };
+  }, [mode, connected]);
 
-  const modeDisplay = getModeDisplay();
+  const progressPercent = useMemo(
+    () =>
+      historyLength > 1 ? Math.round((index / (historyLength - 1)) * 100) : 0,
+    [index, historyLength]
+  );
+
+  const isLiveMode = mode === OrderbookMode.LIVE;
+  const isTimeTravelMode = mode === OrderbookMode.TIME_TRAVEL;
 
   return (
     <div className="time-travel-controls">
@@ -51,39 +53,45 @@ export const TimeTravelControls = () => {
           Mode:
           <span className={modeDisplay.className}>{modeDisplay.text}</span>
         </span>
-        {mode === OrderbookMode.LIVE ? (
-          hasHistory && (
-            <button
-              onClick={handleEnterTimeTravel}
-              className="enter-time-travel-btn"
-            >
-              Enter Time Travel
-            </button>
-          )
-        ) : (
-          <button onClick={handleBackToLive} className="back-to-live-btn">
+
+        {isLiveMode && hasHistory && (
+          <button
+            onClick={() => setMode(OrderbookMode.TIME_TRAVEL)}
+            className="enter-time-travel-btn"
+          >
+            Enter Time Travel
+          </button>
+        )}
+
+        {isTimeTravelMode && (
+          <button
+            onClick={() => setMode(OrderbookMode.LIVE)}
+            className="back-to-live-btn"
+          >
             Back to Live
           </button>
         )}
       </div>
-      {mode === OrderbookMode.TIME_TRAVEL && hasHistory && (
+
+      {isTimeTravelMode && hasHistory && (
         <div className="time-travel-slider">
           <label htmlFor="history-slider">
-            Snapshot {index + 1} of {history.length} (
-            {Math.round((index / (history.length - 1)) * 100)}% through history)
+            Snapshot {index + 1} of {historyLength} ({progressPercent}% through
+            history)
           </label>
           <input
             id="history-slider"
             type="range"
             min="0"
-            max={Math.max(0, history.length - 1)}
+            max={maxIndex}
             value={index}
-            onChange={handleSliderChange}
+            onChange={(e) => setIndex(parseInt(e.target.value, 10))}
           />
           <div className="timestamp-display">Time: {timestamp}</div>
         </div>
       )}
-      {mode === OrderbookMode.LIVE && !hasHistory && (
+
+      {isLiveMode && !hasHistory && (
         <div className="time-travel-hint">
           Collecting history... Time travel will be available soon.
         </div>

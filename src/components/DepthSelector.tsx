@@ -1,9 +1,16 @@
 import { AVAILABLE_DEPTHS, Depth } from "../core/orderbookTypes";
-import { useOrderbookStore, OrderbookState } from "../core/createOrderbookStore";
+import {
+  useOrderbookStore,
+  OrderbookState,
+} from "../core/createOrderbookStore";
+
+const selectDepthState = (s: OrderbookState) => ({
+  depth: s.depth,
+  setDepth: s.setDepth,
+});
 
 export const DepthSelector = () => {
-  const depth = useOrderbookStore((s: OrderbookState) => s.depth);
-  const setDepth = useOrderbookStore((s: OrderbookState) => s.setDepth);
+  const { depth, setDepth } = useOrderbookStore(selectDepthState);
 
   return (
     <div className="depth-selector">
@@ -22,4 +29,3 @@ export const DepthSelector = () => {
     </div>
   );
 };
-

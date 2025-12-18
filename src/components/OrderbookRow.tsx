@@ -6,7 +6,6 @@ interface OrderbookRowProps {
   level: OrderLevel;
   cumulative: number;
   percentWidth: number;
-  recentlyUpdated: boolean;
   side: "bid" | "ask";
   index: number;
 }
@@ -15,15 +14,17 @@ const OrderbookRowComponent = ({
   level,
   cumulative,
   percentWidth,
-  recentlyUpdated,
   side,
   index,
 }: OrderbookRowProps) => {
+  const rowKey = `${side}-${level.price}-${index}-${level.lastUpdated || 0}`;
+  const hasUpdate = level.lastUpdated !== undefined;
+
   return (
     <div
-      key={`${side}-${level.price}-${index}`}
+      key={rowKey}
       className={`orderbook-row ${side}-row ${
-        recentlyUpdated ? "recently-updated" : ""
+        hasUpdate ? "recently-updated" : ""
       }`}
     >
       <div className="bar-container">
