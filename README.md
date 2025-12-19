@@ -1,7 +1,7 @@
 # Kraken Orderbook Visualizer & SDK
 
 > **🏆 Built for the Kraken Developer Platform Hackathon**  
-> **🚀 [Live Demo](https://orderbook-ochre.vercel.app/)** | **📚 [Full Documentation](./src/docs/README.md)** | **🔧 [API Reference](./src/docs/API.md)**
+> **🚀 [Live Demo](https://orderbook-ochre.vercel.app/)**
 
 ## 🎯 Problem Statement
 
@@ -108,20 +108,7 @@ function CustomOrderbook() {
 ## 🎥 Demo & Documentation
 
 - **🌐 Live Demo**: [https://orderbook-ochre.vercel.app/](https://orderbook-ochre.vercel.app/)
-- **📖 Full Documentation**: [README.md](./src/docs/README.md) - Architecture, embedding guide, examples
-- **🔧 API Reference**: [API.md](./src/docs/API.md) - Complete TypeScript API with 340 lines of detailed documentation
 - **🎞️ Video Walkthrough**: _(Add your video link here before final submission)_
-
-### Screenshots
-
-**Real-time Orderbook with Depth Visualization:**
-![Orderbook Screenshot](https://via.placeholder.com/800x400.png?text=Replace+with+actual+screenshot)
-
-**Time Travel Feature - Replay Historical Data:**
-![Time Travel Screenshot](https://via.placeholder.com/800x400.png?text=Replace+with+actual+screenshot)
-
-**Live Mid-Price Chart:**
-![Chart Screenshot](https://via.placeholder.com/800x400.png?text=Replace+with+actual+screenshot)
 
 ## 📁 Project Structure
 
@@ -140,9 +127,8 @@ src/
   utils/                    # Helper functions
     formatNumbers.ts        # Price/volume formatting
     timestampMarker.ts      # Update highlighting logic
-  docs/                     # Comprehensive documentation
-    README.md              # Full developer guide
-    API.md                 # TypeScript API reference
+  examples/                 # Usage examples
+    Demo.tsx               # Demo component
 ```
 
 ## 🔮 Future Enhancements
@@ -179,7 +165,7 @@ With additional time, this project could evolve into a comprehensive trading inf
 
 **Reusability**: The headless architecture means developers can use just the core (3 files, ~600 lines) or the entire UI. Works in React, Vue, Svelte, or vanilla JavaScript.
 
-**Completeness**: From WebSocket protocol implementation to visual polish (depth bars, highlights, spread display), every aspect is thoughtfully executed. The documentation (487 lines across 2 files) rivals commercial SDKs.
+**Completeness**: From WebSocket protocol implementation to visual polish (depth bars, highlights, spread display), every aspect is thoughtfully executed with comprehensive inline documentation and TypeScript types throughout.
 
 **Innovation**: The time-travel feature is unique in orderbook visualizers—invaluable for debugging, education, and post-market analysis.
 
@@ -202,7 +188,7 @@ build/            # Optimized production bundle
 
 ## 🤝 Contributing
 
-This project was built in 48 hours for the Kraken Developer Platform Hackathon. Contributions, issues, and feature requests are welcome!
+This project was built for the Kraken Developer Platform Hackathon. Contributions, issues, and feature requests are welcome!
 
 ## 📄 License
 
@@ -210,4 +196,4 @@ MIT License - See LICENSE file for details
 
 ---
 
-**Built with ❤️ by [Your Name]** | **Hackathon Submission - December 2025**
+**Built with ❤️ by Dan Cross** | **Hackathon Submission - December 2025**
